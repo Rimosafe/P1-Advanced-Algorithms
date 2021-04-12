@@ -22,9 +22,15 @@ test4:
 test5:
 	./project < Tests/input05
 
+test6:
+	./project < Tests/input06
+
+test7:
+	./project < Tests/input07
+
 
 val:
-	valgrind -v ./project < input01
+	valgrind -v ./project < Tests/input01
 
 vgdb:
-	valgrind --vgdb=yes --vgdb-error=0 ./project < input01
+	valgrind --vgdb=yes --vgdb-error=0 ./project < Tests/input01
