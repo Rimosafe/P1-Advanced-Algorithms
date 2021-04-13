@@ -5,10 +5,8 @@
 typedef struct {
   char* text;
   char* pattern;
-  char* occurrences;
   int text_size;
   int pattern_size;
-  int kmp_count;
 } StringMatch;
 
 void operations_handler();
@@ -48,15 +46,7 @@ StringMatch* newStringMatching() {
     return NULL;
   }
 
-  str_match->occurrences = malloc(initial_size*sizeof(char));
-  if(str_match->occurrences == NULL) {
-    free(str_match->text);
-    free(str_match->pattern);
-    free(str_match);
-    return NULL;
-  }
 
-  str_match->kmp_count = 0;
   str_match->text_size = initial_size;
   str_match->pattern_size = initial_size;
 
@@ -66,7 +56,6 @@ StringMatch* newStringMatching() {
 void freeStringMatching(StringMatch* str_match) {
   free(str_match->text);
   free(str_match->pattern);
-  free(str_match->occurrences);
   free(str_match);
 }
 
@@ -86,20 +75,15 @@ void operations_handler() {
         c = getchar();
         s = read_pattern(s);
         s = naive_search(s);
-        printf("%s\n", s->occurrences);
         break;
 
       case 'K':
         c = getchar();
-        s = read_pattern(s);
         s = kmp_search(s);
-        printf("%s\n", s->occurrences);
-        printf("%d\n", s->kmp_count);
         break;
 
       case 'B':
         c = getchar();
-        s = read_pattern(s);
         break;
 
       case 'X':
@@ -174,19 +158,9 @@ StringMatch* read_pattern(StringMatch* s) {
   return s;
 }
 
-StringMatch* resolve_output(StringMatch *s, int occurence, int index) {
-  s->occurrences[index] = occurence + '0';
-  s->occurrences[index + 1] = ' ';
-  return s;
-}
-
 
 StringMatch* naive_search(StringMatch *s) {
   int i;
-  int size;
-  int count;
-  count = 0;
-  size = 1;
 
   for(i = 0; i < s->text_size; i++) {
     int j;
@@ -197,24 +171,11 @@ StringMatch* naive_search(StringMatch *s) {
     }
 
     if(j == s->pattern_size) {
-
-      if(count + 1 >= size) {
-        size = size * 2;
-        s->occurrences = realloc(s->occurrences, size*sizeof(char));
-      }
-
-      s = resolve_output(s, i, count);
-      count+=2;
-
+      printf("%d ", i);
     }
   }
 
-  if(count == size){
-    size = size * 2;
-    s->occurrences = realloc(s->occurrences, size*sizeof(char));
-  }
-
-  s->occurrences[count] = '\0';
+  printf("\n");
   return s;
 }
 
@@ -222,48 +183,34 @@ StringMatch* naive_search(StringMatch *s) {
 StringMatch* kmp_search(StringMatch *s) {
   int initial_size;
   int *pi_table;
+  int kmp_count;
   int i;
   int j;
-  int size;
-  int count;
 
   initial_size = 1;
-  pi_table = malloc(initial_size*sizeof(int));
-  pi_table =  compute_pi_table(s, pi_table);
-
-  count = 0;
-  size = 1;
+  kmp_count = 0;
   i = 0;
   j = 0;
 
+  pi_table = malloc(initial_size*sizeof(int));
+  pi_table =  compute_pi_table(s, pi_table);
+
   while(i < s->text_size) {
-
-
-
     if(s->text[i] == s->pattern[j]) {
       i++;
       j++;
-      s->kmp_count++;
+      kmp_count++;
     }
 
     if(j == s->pattern_size) {
-
-      if(count + 1 >= size) {
-        size = size * 2;
-        s->occurrences = realloc(s->occurrences, size*sizeof(char));
-      }
-
-      s = resolve_output(s, i-j, count);
-      count+=2;
+      printf("%d ", i-j);
       j = pi_table[j-1];
-
       /* Last text char coincide with last pattern char */
-      if(i != s->text_size) s->kmp_count++;
-
+      if(i != s->text_size) kmp_count++;
     }
 
     else if(i < s->text_size && s->pattern[j] != s->text[i]){
-      s->kmp_count++;
+      kmp_count++;
 
       if(j > 0){
         j = pi_table[j-1];
@@ -272,38 +219,29 @@ StringMatch* kmp_search(StringMatch *s) {
     }
   }
 
-  if(count == size){
-    size = size * 2;
-    s->occurrences = realloc(s->occurrences, size*sizeof(char));
-  }
-
-  s->occurrences[count] = '\0';
+  printf("\n%d\n", kmp_count);
+  free(pi_table);
   return s;
-
 }
 
 
 int* compute_pi_table(StringMatch* s, int* pi_table) {
-
   int size;
   int i;
   int j;
-  size = 2;
+  size = 1;
   i = 1;
   j = 0;
 
+
   pi_table[0] = j;
 
-  pi_table = realloc(pi_table, size*sizeof(int));
-  size = size * 2;
-
   while(i < s->pattern_size) {
-
     if(s->pattern[i] == s->pattern[j]) {
 
       if(i == size) {
-        pi_table = realloc(pi_table, size*sizeof(int));
         size = size*2;
+        pi_table = realloc(pi_table, size*sizeof(int));
       }
 
       j++;
@@ -315,26 +253,24 @@ int* compute_pi_table(StringMatch* s, int* pi_table) {
 
       if(j > 0) {
         if(i == size) {
-          pi_table = realloc(pi_table, size*sizeof(int));
           size = size*2;
+          pi_table = realloc(pi_table, size*sizeof(int));
         }
 
         j = pi_table[j-1];
       }
 
       else{
+
         if(i == size) {
-          pi_table = realloc(pi_table, size*sizeof(int));
           size = size*2;
+          pi_table = realloc(pi_table, size*sizeof(int));
         }
 
         pi_table[i] = 0;
         i++;
       }
-
     }
-
   }
-
   return pi_table;
 }
