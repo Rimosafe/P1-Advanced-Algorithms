@@ -8,7 +8,7 @@ typedef struct {
   char* occurrences;
   int text_size;
   int pattern_size;
-  int kmp_occurences;
+  int kmp_count;
 } StringMatch;
 
 void operations_handler();
@@ -18,7 +18,7 @@ StringMatch* read_pattern();
 StringMatch* read_text();
 StringMatch* naive_search();
 StringMatch* kmp_search();
-int* failure_function();
+int* compute_pi_table();
 
 
 int main(){
@@ -56,7 +56,7 @@ StringMatch* newStringMatching() {
     return NULL;
   }
 
-  str_match->kmp_occurences = 0;
+  str_match->kmp_count = 0;
   str_match->text_size = initial_size;
   str_match->pattern_size = initial_size;
 
@@ -94,6 +94,7 @@ void operations_handler() {
         s = read_pattern(s);
         s = kmp_search(s);
         printf("%s\n", s->occurrences);
+        printf("%d\n", s->kmp_count);
         break;
 
       case 'B':
@@ -226,26 +227,26 @@ StringMatch* kmp_search(StringMatch *s) {
   int size;
   int count;
 
-  count = 0;
-  size = 1;
-
   initial_size = 1;
   pi_table = malloc(initial_size*sizeof(int));
+  pi_table =  compute_pi_table(s, pi_table);
 
-  pi_table =  failure_function(s, pi_table);
-
+  count = 0;
+  size = 1;
   i = 0;
   j = 0;
 
   while(i < s->text_size) {
 
+
+
     if(s->text[i] == s->pattern[j]) {
-        i++;
-        j++;
+      i++;
+      j++;
+      s->kmp_count++;
     }
 
     if(j == s->pattern_size) {
-      s->kmp_occurences++;
 
       if(count + 1 >= size) {
         size = size * 2;
@@ -254,18 +255,21 @@ StringMatch* kmp_search(StringMatch *s) {
 
       s = resolve_output(s, i-j, count);
       count+=2;
-
       j = pi_table[j-1];
+
+      /* Last text char coincide with last pattern char */
+      if(i != s->text_size) s->kmp_count++;
 
     }
 
     else if(i < s->text_size && s->pattern[j] != s->text[i]){
+      s->kmp_count++;
+
       if(j > 0){
         j = pi_table[j-1];
       }
       else i++;
     }
-
   }
 
   if(count == size){
@@ -274,13 +278,12 @@ StringMatch* kmp_search(StringMatch *s) {
   }
 
   s->occurrences[count] = '\0';
-
   return s;
 
 }
 
 
-int* failure_function(StringMatch* s, int* pi_table) {
+int* compute_pi_table(StringMatch* s, int* pi_table) {
 
   int size;
   int i;
