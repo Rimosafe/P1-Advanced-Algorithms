@@ -14,9 +14,13 @@ StringMatch* newStringMatching();
 void freeStringMatching();
 StringMatch* read_pattern();
 StringMatch* read_text();
-StringMatch* naive_search();
-StringMatch* kmp_search();
+void naive_search();
+void kmp_search();
 int* compute_pi_table();
+void boyer_moore_search();
+int* pre_process_bad_char_rule();
+int* z_values();
+int max();
 
 
 int main(){
@@ -24,7 +28,8 @@ int main(){
   return 0;
 }
 
-StringMatch* newStringMatching() {
+
+StringMatch* newStringMatching(){
   int initial_size;
   StringMatch* str_match = malloc(sizeof(StringMatch));
 
@@ -53,13 +58,15 @@ StringMatch* newStringMatching() {
   return str_match;
 }
 
-void freeStringMatching(StringMatch* str_match) {
+
+void freeStringMatching(StringMatch* str_match){
   free(str_match->text);
   free(str_match->pattern);
   free(str_match);
 }
 
-void operations_handler() {
+
+void operations_handler(){
 
   StringMatch *s = newStringMatching();
   int c;
@@ -74,16 +81,19 @@ void operations_handler() {
       case 'N':
         c = getchar();
         s = read_pattern(s);
-        s = naive_search(s);
+        naive_search(s);
         break;
 
       case 'K':
         c = getchar();
-        s = kmp_search(s);
+        s = read_pattern(s);
+        kmp_search(s);
         break;
 
       case 'B':
         c = getchar();
+        s = read_pattern(s);
+        boyer_moore_search(s);
         break;
 
       case 'X':
@@ -97,7 +107,7 @@ void operations_handler() {
 }
 
 
-StringMatch* read_text(StringMatch* s) {
+StringMatch* read_text(StringMatch* s){
   int i;
   int c;
   int size;
@@ -128,7 +138,7 @@ StringMatch* read_text(StringMatch* s) {
 }
 
 
-StringMatch* read_pattern(StringMatch* s) {
+StringMatch* read_pattern(StringMatch* s){
   int i;
   int c;
   int size;
@@ -159,7 +169,7 @@ StringMatch* read_pattern(StringMatch* s) {
 }
 
 
-StringMatch* naive_search(StringMatch *s) {
+void naive_search(StringMatch *s){
   int i;
 
   for(i = 0; i < s->text_size; i++) {
@@ -176,11 +186,10 @@ StringMatch* naive_search(StringMatch *s) {
   }
 
   printf("\n");
-  return s;
 }
 
 
-StringMatch* kmp_search(StringMatch *s) {
+void kmp_search(StringMatch *s){
   int initial_size;
   int *pi_table;
   int kmp_count;
@@ -219,13 +228,12 @@ StringMatch* kmp_search(StringMatch *s) {
     }
   }
 
-  printf("\n%d\n", kmp_count);
+  printf("\n%d \n", kmp_count);
   free(pi_table);
-  return s;
 }
 
 
-int* compute_pi_table(StringMatch* s, int* pi_table) {
+int* compute_pi_table(StringMatch* s, int* pi_table){
   int size;
   int i;
   int j;
@@ -236,10 +244,10 @@ int* compute_pi_table(StringMatch* s, int* pi_table) {
 
   pi_table[0] = j;
 
-  while(i < s->pattern_size) {
-    if(s->pattern[i] == s->pattern[j]) {
+  while(i < s->pattern_size){
+    if(s->pattern[i] == s->pattern[j]){
 
-      if(i == size) {
+      if(i == size){
         size = size*2;
         pi_table = realloc(pi_table, size*sizeof(int));
       }
@@ -249,10 +257,10 @@ int* compute_pi_table(StringMatch* s, int* pi_table) {
       i++;
     }
 
-    else {
+    else{
 
-      if(j > 0) {
-        if(i == size) {
+      if(j > 0){
+        if(i == size){
           size = size*2;
           pi_table = realloc(pi_table, size*sizeof(int));
         }
@@ -262,7 +270,7 @@ int* compute_pi_table(StringMatch* s, int* pi_table) {
 
       else{
 
-        if(i == size) {
+        if(i == size){
           size = size*2;
           pi_table = realloc(pi_table, size*sizeof(int));
         }
@@ -273,4 +281,173 @@ int* compute_pi_table(StringMatch* s, int* pi_table) {
     }
   }
   return pi_table;
+}
+
+
+int max(int a, int b){
+
+  return (a > b) ? a : b;
+}
+
+
+char* reverse_string(StringMatch* s, char* reverse){
+
+  int i, j;
+
+  j = s->pattern_size - 1;
+
+  for(i = 0; i < s->pattern_size; i++) {
+      reverse[i] = s->pattern[j];
+      j--;
+  }
+
+  reverse[s->pattern_size] = '\0';
+
+  return reverse;
+}
+
+
+int* z_algorithm(StringMatch* s, int* sgs_table){
+
+  int i;
+  int j;
+  int left;
+  int right;
+  char* reverse;
+
+  right = 0;
+  left = 0;
+
+  reverse = malloc((s->pattern_size+1)*sizeof(char));
+  reverse = reverse_string(s, reverse);
+
+  for(i = 1; i < s->pattern_size; i++){
+
+    if(i > right){
+      left = i;
+      right = i;
+
+      while(right < s->pattern_size && reverse[right-left] == reverse[right]) right++;
+
+      sgs_table[s->pattern_size - i - 1] = right - left;
+      right--;
+    }
+
+    else{
+      j = i - left;
+
+      if(sgs_table[j] < right - i - 1) sgs_table[i] = sgs_table[s->pattern_size - j - 1];
+
+      else{
+        left = i;
+
+        while(right < s->pattern_size && reverse[right-left] == reverse[right]) right++;
+
+        sgs_table[s->pattern_size - i - 1] = right - left;
+        right--;
+      }
+    }
+  }
+
+  free(reverse);
+  return sgs_table;
+}
+
+
+int* pre_process_bad_char_rule(StringMatch* s, int* bc_table){
+
+  int i;
+  int a_size;
+
+  a_size = 128;
+
+  for(i = 0; i < a_size; i++){
+    bc_table[i] = s->pattern_size;
+  }
+
+  for(i = 0; i < s->pattern_size; i++){
+    bc_table[(int)s->pattern[i]] = max(1, s->pattern_size - i - 1);
+  }
+
+  return bc_table;
+}
+
+int* pre_process_good_suffix_rule(StringMatch* s, int* gs_table, int* z_values){
+  return gs_table;
+}
+
+void boyer_moore_search(StringMatch *s){
+  int a_size;
+  int *z_values;
+  int *bc_table;
+  int *gs_table;
+  int i;
+  int j;
+  int comp;
+
+  comp = 0;
+  a_size = 128;
+
+  z_values = malloc(s->pattern_size*sizeof(int));
+  gs_table = malloc(s->pattern_size*sizeof(int));
+  bc_table = malloc(a_size*sizeof(int));
+
+  z_values[s->pattern_size - 1] = s->pattern_size;
+  for(i = 0; i < s->pattern_size - 1; i++) {
+    z_values[i] = 0;
+  }
+
+  for(i = 1; i < s->pattern_size; i++) {
+    gs_table[i] = s->pattern_size;
+  }
+
+  pre_process_bad_char_rule(s, bc_table);
+  z_algorithm(s, z_values);
+  pre_process_good_suffix_rule(s, gs_table, z_values);
+
+  printf("\n");
+  for(i = 0; i < s->pattern_size; i++) {
+    printf("%d ", i);
+  }
+  printf("\n");
+  for(i = 0; i < s->pattern_size; i++) {
+    printf("%c ", s->pattern[i]);
+  }
+  printf("\n");
+  for(i = 0; i < s->pattern_size; i++) {
+    printf("%d ", z_values[i]);
+  }
+  printf("\n");
+
+  i = 0;
+
+  /*while(i < s->text_size - s->pattern_size) {
+
+    j = s->pattern_size - 1;
+
+
+    while(j >= 0 && s->pattern[j] == s->text[i+j]) {
+      printf("comparing %c with %c\n", s->pattern[j], s->text[i+j]);
+      comp++;
+      j--;
+    }
+
+    if(j < 0){
+      printf("%d ", i);
+      i += max(sgs_table[0], bc_table[(int)s->text[i + s->pattern_size - 1]]);
+    }
+
+    else {
+      printf("comparing %c with %c\n", s->pattern[j], s->text[i+j]);
+      comp++;
+      i += max(sgs_table[s->pattern_size - j + 1], j - bc_table[(int)s->text[i + j]]);
+    }
+
+  }*/
+
+  printf("\n%d \n", comp);
+  free(gs_table);
+  free(z_values);
+  free(bc_table);
+
 }
