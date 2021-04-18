@@ -18,7 +18,7 @@ void naive_search();
 void kmp_search();
 int* compute_pi_table();
 void boyer_moore_search();
-int* pre_process_bad_char_rule();
+int* bad_char_rule();
 int* z_values();
 int max();
 
@@ -82,6 +82,7 @@ void operations_handler(){
         c = getchar();
         s = read_pattern(s);
         naive_search(s);
+        printf("\n");
         break;
 
       case 'K':
@@ -307,7 +308,7 @@ char* reverse_string(StringMatch* s, char* reverse){
 }
 
 
-int* z_algorithm(StringMatch* s, int* sgs_table){
+int* z_algorithm(StringMatch* s, int* z_array){
 
   int i;
   int j;
@@ -321,6 +322,11 @@ int* z_algorithm(StringMatch* s, int* sgs_table){
   reverse = malloc((s->pattern_size+1)*sizeof(char));
   reverse = reverse_string(s, reverse);
 
+  z_array[s->pattern_size - 1] = s->pattern_size;
+  for(i = 0; i < s->pattern_size - 1; i++) {
+    z_array[i] = 0;
+  }
+
   for(i = 1; i < s->pattern_size; i++){
 
     if(i > right){
@@ -329,32 +335,32 @@ int* z_algorithm(StringMatch* s, int* sgs_table){
 
       while(right < s->pattern_size && reverse[right-left] == reverse[right]) right++;
 
-      sgs_table[s->pattern_size - i - 1] = right - left;
+      z_array[s->pattern_size - i - 1] = right - left;
       right--;
     }
 
     else{
       j = i - left;
 
-      if(sgs_table[j] < right - i - 1) sgs_table[i] = sgs_table[s->pattern_size - j - 1];
+      if(z_array[j] < right - i - 1) z_array[i] = z_array[s->pattern_size - j - 1];
 
       else{
         left = i;
 
         while(right < s->pattern_size && reverse[right-left] == reverse[right]) right++;
 
-        sgs_table[s->pattern_size - i - 1] = right - left;
+        z_array[s->pattern_size - i - 1] = right - left;
         right--;
       }
     }
   }
 
   free(reverse);
-  return sgs_table;
+  return z_array;
 }
 
 
-int* pre_process_bad_char_rule(StringMatch* s, int* bc_table){
+int* bad_char_rule(StringMatch* s, int* bc_table){
 
   int i;
   int a_size;
@@ -372,82 +378,128 @@ int* pre_process_bad_char_rule(StringMatch* s, int* bc_table){
   return bc_table;
 }
 
-int* pre_process_good_suffix_rule(StringMatch* s, int* gs_table, int* z_values){
-  return gs_table;
+int* l_prime_array(StringMatch* s, int* lp, int* z_values){
+
+  int i;
+
+  for(i = 0; i < s->pattern_size; i++){
+    lp[i] = 0;
+  }
+
+  for(i = 0; i < s->pattern_size; i++){
+    if(z_values[i] == i + 1) lp[s->pattern_size - i - 1] = i + 1;
+  }
+
+  for(i = s->pattern_size - 2; i >= 0; i--) {
+    if(lp[i] == 0) lp[i] = lp[i+1];
+  }
+
+
+  return lp;
+}
+
+int* capital_l_prime_array(StringMatch* s, int* clp, int* z_values){
+
+  int i, j;
+
+  for(i = 0; i < s->pattern_size; i++){
+    clp[i] = 0;
+  }
+
+  for(i = 0; i < s->pattern_size - 1; i++){
+    j = s->pattern_size - z_values[i];
+    if(j < s->pattern_size) clp[j] = i + 1;
+  }
+
+  return clp;
+}
+
+int* capital_l_array(StringMatch* s, int* cl, int* clp){
+
+  int i;
+
+  for(i = 0; i < s->pattern_size; i++){
+    cl[i] = 0;
+  }
+
+  cl[1] = clp[1];
+
+  for(i = 2; i < s->pattern_size; i++){
+    cl[i] = max(cl[i-1], clp[i]);
+  }
+
+  return cl;
+}
+
+int good_suffix_rule(int length, int index, int* clp, int* llp) {
+
+  int k;
+
+  if(index == length - 1) return 0;
+
+  k = index + 1;
+
+  if(clp[k] > 0) return length - clp[k];
+
+  return length - llp[k];
 }
 
 void boyer_moore_search(StringMatch *s){
   int a_size;
-  int *z_values;
-  int *bc_table;
-  int *gs_table;
-  int i;
-  int j;
-  int comp;
+  int *z_values, *bc_table, *l_prime, *capital_l, *capital_l_prime;
+  int i, j, comp, bc_shift, gs_shift, shift;
 
   comp = 0;
   a_size = 128;
 
-  z_values = malloc(s->pattern_size*sizeof(int));
-  gs_table = malloc(s->pattern_size*sizeof(int));
   bc_table = malloc(a_size*sizeof(int));
+  z_values = malloc(s->pattern_size*sizeof(int));
+  l_prime = malloc(s->pattern_size*sizeof(int));
+  capital_l_prime = malloc(s->pattern_size*sizeof(int));
+  capital_l = malloc(s->pattern_size*sizeof(int));
 
-  z_values[s->pattern_size - 1] = s->pattern_size;
-  for(i = 0; i < s->pattern_size - 1; i++) {
-    z_values[i] = 0;
-  }
 
-  for(i = 1; i < s->pattern_size; i++) {
-    gs_table[i] = s->pattern_size;
-  }
-
-  pre_process_bad_char_rule(s, bc_table);
-  z_algorithm(s, z_values);
-  pre_process_good_suffix_rule(s, gs_table, z_values);
-
-  printf("\n");
-  for(i = 0; i < s->pattern_size; i++) {
-    printf("%d ", i);
-  }
-  printf("\n");
-  for(i = 0; i < s->pattern_size; i++) {
-    printf("%c ", s->pattern[i]);
-  }
-  printf("\n");
-  for(i = 0; i < s->pattern_size; i++) {
-    printf("%d ", z_values[i]);
-  }
-  printf("\n");
+  bc_table = bad_char_rule(s, bc_table);
+  z_values = z_algorithm(s, z_values);
+  l_prime = l_prime_array(s, l_prime, z_values);
+  capital_l_prime = capital_l_prime_array(s, capital_l_prime, z_values);
+  capital_l = capital_l_array(s, capital_l, capital_l_prime);
 
   i = 0;
 
-  /*while(i < s->text_size - s->pattern_size) {
+  while(i < s->text_size - s->pattern_size + 1) {
 
     j = s->pattern_size - 1;
-
+    shift = 1;
 
     while(j >= 0 && s->pattern[j] == s->text[i+j]) {
-      printf("comparing %c with %c\n", s->pattern[j], s->text[i+j]);
       comp++;
       j--;
     }
 
     if(j < 0){
       printf("%d ", i);
-      i += max(sgs_table[0], bc_table[(int)s->text[i + s->pattern_size - 1]]);
+      gs_shift = max(shift, s->pattern_size - l_prime[1]);
+      shift = max(shift, gs_shift);
     }
 
     else {
-      printf("comparing %c with %c\n", s->pattern[j], s->text[i+j]);
       comp++;
-      i += max(sgs_table[s->pattern_size - j + 1], j - bc_table[(int)s->text[i + j]]);
+      bc_shift = max(shift, bc_table[(int)s->text[i + j]]);
+      gs_shift = max(shift, good_suffix_rule(s->pattern_size, j, capital_l_prime, l_prime));
+      shift = max(bc_shift, gs_shift);
     }
 
-  }*/
+    i += shift;
+
+  }
 
   printf("\n%d \n", comp);
-  free(gs_table);
-  free(z_values);
+
   free(bc_table);
+  free(z_values);
+  free(l_prime);
+  free(capital_l_prime);
+  free(capital_l);
 
 }
