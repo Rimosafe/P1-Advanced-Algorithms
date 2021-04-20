@@ -30,7 +30,7 @@ test7:
 
 
 val:
-	valgrind -v ./project < Tests/input01
+	valgrind -v --leak-check=full ./project < Tests/input07
 
 vgdb:
-	valgrind --vgdb=yes --vgdb-error=0 ./project < Tests/input01
+	valgrind --vgdb=yes --vgdb-error=0 ./project < Tests/input07

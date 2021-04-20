@@ -12,22 +12,65 @@ typedef struct {
 void operations_handler();
 StringMatch* newStringMatching();
 void freeStringMatching();
-StringMatch* read_pattern();
 StringMatch* read_text();
+StringMatch* read_pattern();
 void naive_search();
 void kmp_search();
 int* compute_pi_table();
-void boyer_moore_search();
-int* bad_char_rule();
-int* z_values();
 int max();
-
+char* reverse_string();
+int* reverse_array();
+int* z_algorithm();
+int* bad_char_rule();
+int* l_prime_array();
+int* capital_l_prime_array();
+int* good_suffix_rule();
+void boyer_moore_search();
 
 int main(){
   operations_handler();
   return 0;
 }
 
+void operations_handler(){
+
+  StringMatch *s = newStringMatching();
+  int c;
+
+  while(EOF != (c = getchar())) {
+    switch (c) {
+      case 'T':
+        c = getchar(); /*Read space*/
+        s = read_text(s); /*Read text*/
+        break;
+
+      case 'N':
+        c = getchar(); /*Read space*/
+        s = read_pattern(s); /*Read pattern*/
+        naive_search(s); /*Naive algorithm*/
+        break;
+
+      case 'K':
+        c = getchar(); /*Read space*/
+        s = read_pattern(s); /*Read pattern*/
+        kmp_search(s); /*Knuth-Morris-Pratt algorithm*/
+        break;
+
+      case 'B':
+        c = getchar(); /*Read space*/
+        s = read_pattern(s); /*Read pattern*/
+        boyer_moore_search(s); /*Boyer Moore algorithm*/
+        break;
+
+      case 'X':
+        freeStringMatching(s);
+        return;
+
+      default:
+        break;
+    }
+  }
+}
 
 StringMatch* newStringMatching(){
   int initial_size;
@@ -58,55 +101,11 @@ StringMatch* newStringMatching(){
   return str_match;
 }
 
-
 void freeStringMatching(StringMatch* str_match){
   free(str_match->text);
   free(str_match->pattern);
   free(str_match);
 }
-
-
-void operations_handler(){
-
-  StringMatch *s = newStringMatching();
-  int c;
-
-  while(EOF != (c = getchar())) {
-    switch (c) {
-      case 'T':
-        c = getchar();
-        s = read_text(s);
-        break;
-
-      case 'N':
-        c = getchar();
-        s = read_pattern(s);
-        naive_search(s);
-        printf("\n");
-        break;
-
-      case 'K':
-        c = getchar();
-        s = read_pattern(s);
-        kmp_search(s);
-        break;
-
-      case 'B':
-        c = getchar();
-        s = read_pattern(s);
-        boyer_moore_search(s);
-        break;
-
-      case 'X':
-        freeStringMatching(s);
-        return;
-
-      default:
-        break;
-    }
-  }
-}
-
 
 StringMatch* read_text(StringMatch* s){
   int i;
@@ -114,10 +113,10 @@ StringMatch* read_text(StringMatch* s){
   int size;
   i = 0;
   size = 1;
-  c = getchar();
+  c = getchar(); /*First char of text*/
 
   while('\n' != c) {
-    if(i == size){
+    if(i == size){ /*Case where was reached the maximum space allocated. Resize array*/
       size = size * 2;
       s->text = realloc(s->text, size*sizeof(char));
     }
@@ -127,9 +126,9 @@ StringMatch* read_text(StringMatch* s){
     c = getchar();
   }
 
-  if(i == size){
+  if(i == size){ /*Finish reading but need to insert '\0'. In case of need, increase memory space to insert '\0'*/
     size = size * 2;
-    s->text = realloc(s->text, size*sizeof(char));
+    s->text = realloc(s->text, size*sizeof(char));/*Increase memory space to insert '\0'*/
   }
 
   s->text[i] = '\0';
@@ -138,17 +137,16 @@ StringMatch* read_text(StringMatch* s){
   return s;
 }
 
-
 StringMatch* read_pattern(StringMatch* s){
   int i;
   int c;
   int size;
   i = 0;
   size = 1;
-  c = getchar();
+  c = getchar(); /*First char of pattern*/
 
   while('\n' != c) {
-    if(i == size){
+    if(i == size){ /*Case where was reached the maximum space allocated. Resize array*/
       size = size * 2;
       s->pattern = realloc(s->pattern, size*sizeof(char));
     }
@@ -158,7 +156,7 @@ StringMatch* read_pattern(StringMatch* s){
     c = getchar();
   }
 
-  if(i == size){
+  if(i == size){ /*Finish reading but need to insert '\0'. In case of need, increase memory space to insert '\0'*/
     size = size * 2;
     s->pattern = realloc(s->pattern, size*sizeof(char));
   }
@@ -168,7 +166,6 @@ StringMatch* read_pattern(StringMatch* s){
 
   return s;
 }
-
 
 void naive_search(StringMatch *s){
   int i;
@@ -181,14 +178,13 @@ void naive_search(StringMatch *s){
       j++;
     }
 
-    if(j == s->pattern_size) {
+    if(j == s->pattern_size) { /*Match found*/
       printf("%d ", i);
     }
   }
 
   printf("\n");
 }
-
 
 void kmp_search(StringMatch *s){
   int initial_size;
@@ -203,23 +199,24 @@ void kmp_search(StringMatch *s){
   j = 0;
 
   pi_table = malloc(initial_size*sizeof(int));
-  pi_table =  compute_pi_table(s, pi_table);
+  pi_table =  compute_pi_table(s, pi_table); /*Preprocessing*/
 
   while(i < s->text_size) {
-    if(s->text[i] == s->pattern[j]) {
+    if(s->text[i] == s->pattern[j]) { /*Character match*/
       i++;
       j++;
       kmp_count++;
     }
 
-    if(j == s->pattern_size) {
+    if(j == s->pattern_size) { /*Match found*/
       printf("%d ", i-j);
       j = pi_table[j-1];
-      /* Last text char coincide with last pattern char */
-      if(i != s->text_size) kmp_count++;
+
+      if(i != s->text_size) kmp_count++; /* Last text char coincide with last pattern char */
+
     }
 
-    else if(i < s->text_size && s->pattern[j] != s->text[i]){
+    else if(i < s->text_size && s->pattern[j] != s->text[i]){ /*Mismatch found*/
       kmp_count++;
 
       if(j > 0){
@@ -233,7 +230,6 @@ void kmp_search(StringMatch *s){
   free(pi_table);
 }
 
-
 int* compute_pi_table(StringMatch* s, int* pi_table){
   int size;
   int i;
@@ -246,9 +242,9 @@ int* compute_pi_table(StringMatch* s, int* pi_table){
   pi_table[0] = j;
 
   while(i < s->pattern_size){
-    if(s->pattern[i] == s->pattern[j]){
+    if(s->pattern[i] == s->pattern[j]){ /*Match*/
 
-      if(i == size){
+      if(i == size){ /*Case where was reached the maximum space allocated. Resize array*/
         size = size*2;
         pi_table = realloc(pi_table, size*sizeof(int));
       }
@@ -258,10 +254,10 @@ int* compute_pi_table(StringMatch* s, int* pi_table){
       i++;
     }
 
-    else{
+    else{ /*Mismatch*/
 
       if(j > 0){
-        if(i == size){
+        if(i == size){ /*Case where was reached the maximum space allocated. Resize array*/
           size = size*2;
           pi_table = realloc(pi_table, size*sizeof(int));
         }
@@ -269,9 +265,9 @@ int* compute_pi_table(StringMatch* s, int* pi_table){
         j = pi_table[j-1];
       }
 
-      else{
+      else{ /*Immediate mismatch*/
 
-        if(i == size){
+        if(i == size){ /*Case where was reached the maximum space allocated. Resize array*/
           size = size*2;
           pi_table = realloc(pi_table, size*sizeof(int));
         }
@@ -284,12 +280,10 @@ int* compute_pi_table(StringMatch* s, int* pi_table){
   return pi_table;
 }
 
-
 int max(int a, int b){
 
   return (a > b) ? a : b;
 }
-
 
 char* reverse_string(StringMatch* s, char* reverse){
 
@@ -307,6 +301,18 @@ char* reverse_string(StringMatch* s, char* reverse){
   return reverse;
 }
 
+int* reverse_array(int size, int* array, int* reverse){
+  int i, j;
+
+  j = size - 1;
+
+  for(i = 0; i < size; i++) {
+      reverse[i] = array[j];
+      j--;
+  }
+
+  return reverse;
+}
 
 int* z_algorithm(StringMatch* s, int* z_array){
 
@@ -322,43 +328,43 @@ int* z_algorithm(StringMatch* s, int* z_array){
   reverse = malloc((s->pattern_size+1)*sizeof(char));
   reverse = reverse_string(s, reverse);
 
-  z_array[s->pattern_size - 1] = s->pattern_size;
+  z_array[0] = s->pattern_size;
   for(i = 0; i < s->pattern_size - 1; i++) {
     z_array[i] = 0;
   }
 
   for(i = 1; i < s->pattern_size; i++){
 
-    if(i > right){
+    if(i > right){ /*Outside Z-box*/
       left = i;
       right = i;
 
       while(right < s->pattern_size && reverse[right-left] == reverse[right]) right++;
 
-      z_array[s->pattern_size - i - 1] = right - left;
+      z_array[i] = right - left;
       right--;
     }
 
-    else{
+    else{ /*Inside Z-box*/
       j = i - left;
 
-      if(z_array[j] < right - i - 1) z_array[i] = z_array[s->pattern_size - j - 1];
+      if(z_array[j] < right - i + 1) z_array[i] = z_array[j]; /* Use values that are already computed*/
 
       else{
         left = i;
 
         while(right < s->pattern_size && reverse[right-left] == reverse[right]) right++;
 
-        z_array[s->pattern_size - i - 1] = right - left;
+        z_array[i] = right - left;
         right--;
       }
     }
   }
 
   free(reverse);
+
   return z_array;
 }
-
 
 int* bad_char_rule(StringMatch* s, int* bc_table){
 
@@ -367,18 +373,18 @@ int* bad_char_rule(StringMatch* s, int* bc_table){
 
   a_size = 128;
 
-  for(i = 0; i < a_size; i++){
-    bc_table[i] = s->pattern_size;
+  for(i = 0; i < a_size; i++){ /*Set all occurences to -1*/
+    bc_table[i] = -1;
   }
 
-  for(i = 0; i < s->pattern_size; i++){
-    bc_table[(int)s->pattern[i]] = max(1, s->pattern_size - i - 1);
+  for(i = 0; i < s->pattern_size; i++){ /*Set value to the last occurence of the character*/
+    bc_table[(int)s->pattern[i]] = i;
   }
 
   return bc_table;
 }
 
-int* l_prime_array(StringMatch* s, int* lp, int* z_values){
+int* l_prime_array(StringMatch* s, int* lp, int* n_table){
 
   int i;
 
@@ -387,18 +393,16 @@ int* l_prime_array(StringMatch* s, int* lp, int* z_values){
   }
 
   for(i = 0; i < s->pattern_size; i++){
-    if(z_values[i] == i + 1) lp[s->pattern_size - i - 1] = i + 1;
+    if(n_table[i] == i + 1) lp[s->pattern_size - i - 1] = i + 1;
   }
 
   for(i = s->pattern_size - 2; i >= 0; i--) {
     if(lp[i] == 0) lp[i] = lp[i+1];
   }
-
-
   return lp;
 }
 
-int* capital_l_prime_array(StringMatch* s, int* clp, int* z_values){
+int* capital_l_prime_array(StringMatch* s, int* clp, int* n_table){
 
   int i, j;
 
@@ -407,99 +411,83 @@ int* capital_l_prime_array(StringMatch* s, int* clp, int* z_values){
   }
 
   for(i = 0; i < s->pattern_size - 1; i++){
-    j = s->pattern_size - z_values[i];
+    j = s->pattern_size - n_table[i];
     if(j < s->pattern_size) clp[j] = i + 1;
   }
-
   return clp;
 }
 
-int* capital_l_array(StringMatch* s, int* cl, int* clp){
+int* good_suffix_rule(StringMatch *s, int* gs_table, int* llp,  int* clp){
 
   int i;
 
   for(i = 0; i < s->pattern_size; i++){
-    cl[i] = 0;
+    if(clp[i] > 0) gs_table[i] = s->pattern_size - clp[i];
+    else gs_table[i] = s->pattern_size - llp[i];
   }
 
-  cl[1] = clp[1];
-
-  for(i = 2; i < s->pattern_size; i++){
-    cl[i] = max(cl[i-1], clp[i]);
-  }
-
-  return cl;
-}
-
-int good_suffix_rule(int length, int index, int* clp, int* llp) {
-
-  int k;
-
-  if(index == length - 1) return 0;
-
-  k = index + 1;
-
-  if(clp[k] > 0) return length - clp[k];
-
-  return length - llp[k];
+  return gs_table;
 }
 
 void boyer_moore_search(StringMatch *s){
   int a_size;
-  int *z_values, *bc_table, *l_prime, *capital_l, *capital_l_prime;
+  int *z_values, *n_table, *bc_table, *l_prime, *capital_l_prime, *gs_table;
   int i, j, comp, bc_shift, gs_shift, shift;
 
   comp = 0;
   a_size = 128;
 
   bc_table = malloc(a_size*sizeof(int));
+  gs_table = malloc(s->pattern_size*sizeof(int));
   z_values = malloc(s->pattern_size*sizeof(int));
+  n_table = malloc(s->pattern_size*sizeof(int));
   l_prime = malloc(s->pattern_size*sizeof(int));
   capital_l_prime = malloc(s->pattern_size*sizeof(int));
-  capital_l = malloc(s->pattern_size*sizeof(int));
 
-
-  bc_table = bad_char_rule(s, bc_table);
-  z_values = z_algorithm(s, z_values);
-  l_prime = l_prime_array(s, l_prime, z_values);
-  capital_l_prime = capital_l_prime_array(s, capital_l_prime, z_values);
-  capital_l = capital_l_array(s, capital_l, capital_l_prime);
+  bc_table = bad_char_rule(s, bc_table); /*Bad character table*/
+  z_values = z_algorithm(s, z_values); /*Z values computed from reversed pattern*/
+  n_table = reverse_array(s->pattern_size, z_values, n_table); /*N values*/
+  l_prime = l_prime_array(s, l_prime, n_table); /* l*(i) */
+  capital_l_prime = capital_l_prime_array(s, capital_l_prime, n_table); /* L*(i) */
+  gs_table = good_suffix_rule(s, gs_table, l_prime, capital_l_prime); /*Strong good suffix table*/
 
   i = 0;
 
-  while(i < s->text_size - s->pattern_size + 1) {
+  while(i <= s->text_size - s->pattern_size) {
 
     j = s->pattern_size - 1;
     shift = 1;
 
-    while(j >= 0 && s->pattern[j] == s->text[i+j]) {
+    while(j >= 0 && s->pattern[j] == s->text[i+j]) { /*While characters of pattern and text are matching*/
       comp++;
       j--;
     }
 
-    if(j < 0){
+    if(j < 0){ /*Match found*/
       printf("%d ", i);
-      gs_shift = max(shift, s->pattern_size - l_prime[1]);
-      shift = max(shift, gs_shift);
+      shift = gs_table[0];
     }
 
-    else {
+    else { /*Mismatch found*/
       comp++;
-      bc_shift = max(shift, bc_table[(int)s->text[i + j]]);
-      gs_shift = max(shift, good_suffix_rule(s->pattern_size, j, capital_l_prime, l_prime));
+      bc_shift = max(shift, j - bc_table[(int)s->text[i + j]]);
+      if(j < s->pattern_size - 1) {
+        gs_shift = max(shift, gs_table[j+1]);
+      }
+      else{ /*First comparison mismatch*/
+        gs_shift = 1;
+      }
       shift = max(bc_shift, gs_shift);
     }
-
     i += shift;
-
   }
 
   printf("\n%d \n", comp);
 
   free(bc_table);
+  free(gs_table);
   free(z_values);
+  free(n_table);
   free(l_prime);
   free(capital_l_prime);
-  free(capital_l);
-
 }
